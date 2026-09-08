@@ -1,0 +1,4141 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>Network Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <style>
+      html, body, #map {
+        height: 100%;
+        margin: 0;
+      }
+      .arrow-label {
+        background: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        box-shadow: 0 0 4px rgba(0,0,0,0.3);
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      .leaflet-control-title {
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+        box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        cursor: move;
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        user-select: none;
+      }
+      .slider-container {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        display: none; /* Initially hidden */
+      }
+      .slider-label {
+        font-size: 14px;
+        margin-bottom: 5px;
+      }
+      .dimmed {
+        opacity: 0.3;
+      }
+      .dropdown-container {
+        margin-top: 10px;
+      }
+      select, input {
+        width: 100%;
+        padding: 5px;
+        font-size: 14px;
+        border-radius: 4px;
+      }
+      .toggle-button {
+        position: absolute;
+        top: 10px; /* Moved to top to avoid covering controls */
+        right: 10px; /* Positioned to the right */
+        z-index: 1001;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 8px 12px;
+        border-radius: 5px;
+        font-size: 14px;
+        cursor: pointer;
+        box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        border: none;
+      }
+      .toggle-button:hover {
+        background: rgba(255, 255, 255, 1);
+      }
+    </style>
+    </head>
+    <body>
+    <div id="map"></div>
+    <div id="map-title" class="leaflet-control-title">Mapping Finnish DMOs' Hyperlink Networks</div>
+    <button id="toggle-controls" class="toggle-button">Show Controls</button>
+    <div id="controls" class="slider-container">
+      <div class="slider-label">Max Nodes: <span id="node-count">64</span></div>
+      <input type="range" id="node-slider" min="1" max="64" value="64" step="1">
+      <div class="slider-label">Edges: <span id="edge-count">0 / 125</span></div>
+      <div class="dropdown-container">
+        <div class="slider-label">Filter by Color:</div>
+        <select id="color-filter" multiple>
+          <option value="all">All Colors</option>
+          <option value="Red">Red</option><option value="blue">blue</option><option value="green">green</option><option value="pink">pink</option><option value="purple">purple</option>
+        </select>
+      </div>
+      <div class="dropdown-container">
+        <div class="slider-label">Filter by Hover:</div>
+        <select id="hover-filter" multiple>
+          <option value="all">All Hovers</option>
+          <option value="arcticlakeland.com-Lakeland">arcticlakeland.com-Lakeland</option><option value="discovermuonio.fi-Lapland">discovermuonio.fi-Lapland</option><option value="experience365.fi-Lapland">experience365.fi-Lapland</option><option value="exploreutsjoki.fi-Lapland">exploreutsjoki.fi-Lapland</option><option value="gosaimaa.com-Lakeland">gosaimaa.com-Lakeland</option><option value="helsinkinorth.fi-HelReg">helsinkinorth.fi-HelReg</option><option value="helsinkipartners.com-HelReg">helsinkipartners.com-HelReg</option><option value="kainuunliitto.fi-Lakeland">kainuunliitto.fi-Lakeland</option><option value="keskisuomi.fi-Lakeland">keskisuomi.fi-Lakeland</option><option value="koli.fi-Lakeland">koli.fi-Lakeland</option><option value="laplandnorth.fi-Lapland">laplandnorth.fi-Lapland</option><option value="levi.fi-Lapland">levi.fi-Lapland</option><option value="myhelsinki.fi-HelReg">myhelsinki.fi-HelReg</option><option value="originallapland.com-Lapland">originallapland.com-Lapland</option><option value="paljakka.fi-Lakeland">paljakka.fi-Lakeland</option><option value="pohjois-karjala.fi-Lakeland">pohjois-karjala.fi-Lakeland</option><option value="pohjois-savonmatkailu.fi-Lakeland">pohjois-savonmatkailu.fi-Lakeland</option><option value="posiolapland.com-Lapland">posiolapland.com-Lapland</option><option value="pyha.fi-Lapland">pyha.fi-Lapland</option><option value="ruka.fi-Lapland">ruka.fi-Lapland</option><option value="sipoo.fi/en/visit-sipoo-HelReg">sipoo.fi/en/visit-sipoo-HelReg</option><option value="vaasa.fi/koe-ja-nae-C&A">vaasa.fi/koe-ja-nae-C&A</option><option value="vantaa.fi/fi/visit-vantaa-HelReg">vantaa.fi/fi/visit-vantaa-HelReg</option><option value="vasek.fi-C&A">vasek.fi-C&A</option><option value="visitaland.com-C&A">visitaland.com-C&A</option><option value="visitespoo.fi-HelReg">visitespoo.fi-HelReg</option><option value="visitfinland.com-Finland">visitfinland.com-Finland</option><option value="visithame.fi-Lakeland">visithame.fi-Lakeland</option><option value="visithanko.fi-HelReg">visithanko.fi-HelReg</option><option value="visitjyvaskyla.fi-Lakeland">visitjyvaskyla.fi-Lakeland</option><option value="visitkajaani.fi-Lakeland">visitkajaani.fi-Lakeland</option><option value="visitkalajoki.fi-Lapland">visitkalajoki.fi-Lapland</option><option value="visitkarelia.fi-Lakeland">visitkarelia.fi-Lakeland</option><option value="visitkemijarvi.fi-Lapland">visitkemijarvi.fi-Lapland</option><option value="visitkimitoon.fi-C&A">visitkimitoon.fi-C&A</option><option value="visitkokkola.fi-C&A">visitkokkola.fi-C&A</option><option value="visitkotkahamina.fi-Lakeland">visitkotkahamina.fi-Lakeland</option><option value="visitkouvola.fi-Lakeland">visitkouvola.fi-Lakeland</option><option value="visitkristinestad.fi-C&A">visitkristinestad.fi-C&A</option><option value="visitlahti.fi-Lakeland">visitlahti.fi-Lakeland</option><option value="visitlakeus.fi-C&A">visitlakeus.fi-C&A</option><option value="visitlappeenranta.fi-Lakeland">visitlappeenranta.fi-Lakeland</option><option value="visitmikkeli.fi-Lakeland">visitmikkeli.fi-Lakeland</option><option value="visitnaantali.com-C&A">visitnaantali.com-C&A</option><option value="visitoulu.fi-Lapland">visitoulu.fi-Lapland</option><option value="visitparainen.fi-C&A">visitparainen.fi-C&A</option><option value="visitpietarsaarenseutu.fi-C&A">visitpietarsaarenseutu.fi-C&A</option><option value="visitpori.fi-C&A">visitpori.fi-C&A</option><option value="visitporvoo.fi-HelReg">visitporvoo.fi-HelReg</option><option value="visitraahe.fi-Lapland">visitraahe.fi-Lapland</option><option value="visitraseborg.com-HelReg">visitraseborg.com-HelReg</option><option value="visitrauma.fi-C&A">visitrauma.fi-C&A</option><option value="visitrovaniemi.fi-Lapland">visitrovaniemi.fi-Lapland</option><option value="visitsaimaa.fi-Lakeland">visitsaimaa.fi-Lakeland</option><option value="visitsalla.fi-Lapland">visitsalla.fi-Lapland</option><option value="visitsalo.fi-C&A">visitsalo.fi-C&A</option><option value="visitsavonlinna.fi-Lakeland">visitsavonlinna.fi-Lakeland</option><option value="visitsuomussalmi.fi-Lakeland">visitsuomussalmi.fi-Lakeland</option><option value="visittampere.fi-Lakeland">visittampere.fi-Lakeland</option><option value="visitturkuarchipelago.fi-C&A">visitturkuarchipelago.fi-C&A</option><option value="visittuusulanjarvi.fi-HelReg">visittuusulanjarvi.fi-HelReg</option><option value="visitvarkaus.fi-Lakeland">visitvarkaus.fi-Lakeland</option><option value="wildtaiga.fi-Lakeland">wildtaiga.fi-Lakeland</option><option value="yllas.fi-Lapland">yllas.fi-Lapland</option>
+        </select>
+      </div>
+      <div class="dropdown-container">
+        <div class="slider-label">Lat Range (-90 to 90):</div>
+        <input type="number" id="lat-min" min="-90" max="90" value="-90" step="0.1">
+        <input type="number" id="lat-max" min="-90" max="90" value="90" step="0.1">
+      </div>
+      <div class="dropdown-container">
+        <div class="slider-label">Lon Range (-180 to 180):</div>
+        <input type="number" id="lon-min" min="-180" max="180" value="-180" step="0.1">
+        <input type="number" id="lon-max" min="-180" max="180" value="180" step="0.1">
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://rawcdn.githack.com/makinacorpus/Leaflet.TextPath/master/leaflet.textpath.js"></script>
+
+    <script>
+      const cities = [
+  {
+    "node": "visittampere.fi",
+    "lat": 61.4980214,
+    "lon": 23.7603118,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visittampere.fi-Lakeland"
+  },
+  {
+    "node": "visitfinland.com",
+    "lat": 63.3706192,
+    "lon": 25.5754689,
+    "size": 11,
+    "color": "Red",
+    "shape": "square",
+    "node_hover": "visitfinland.com-Finland"
+  },
+  {
+    "node": "visitraseborg.com",
+    "lat": 59.9285263,
+    "lon": 23.52192344963455,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visitraseborg.com-HelReg"
+  },
+  {
+    "node": "visitkokkola.fi",
+    "lat": 63.8391421,
+    "lon": 23.1336845,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitkokkola.fi-C&A"
+  },
+  {
+    "node": "visitpori.fi",
+    "lat": 61.4865443,
+    "lon": 21.7968859,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitpori.fi-C&A"
+  },
+  {
+    "node": "visitraahe.fi",
+    "lat": 64.6795905,
+    "lon": 24.4709593,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitraahe.fi-Lapland"
+  },
+  {
+    "node": "arcticlakeland.com",
+    "lat": 64.2240872,
+    "lon": 27.7334227,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "arcticlakeland.com-Lakeland"
+  },
+  {
+    "node": "wildtaiga.fi",
+    "lat": 64.1261745,
+    "lon": 29.519515,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "wildtaiga.fi-Lakeland"
+  },
+  {
+    "node": "ruka.fi",
+    "lat": 65.9645637,
+    "lon": 29.1883283,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "ruka.fi-Lapland"
+  },
+  {
+    "node": "visitsavonlinna.fi",
+    "lat": 61.8689933,
+    "lon": 28.8797178,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitsavonlinna.fi-Lakeland"
+  },
+  {
+    "node": "visitsaimaa.fi",
+    "lat": 61.1611958,
+    "lon": 28.0599716,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitsaimaa.fi-Lakeland"
+  },
+  {
+    "node": "visithanko.fi",
+    "lat": 59.8228008,
+    "lon": 22.9695005,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visithanko.fi-HelReg"
+  },
+  {
+    "node": "visitsalla.fi",
+    "lat": 66.8318774,
+    "lon": 28.6668631,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitsalla.fi-Lapland"
+  },
+  {
+    "node": "visitespoo.fi",
+    "lat": 60.2047672,
+    "lon": 24.6568435,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visitespoo.fi-HelReg"
+  },
+  {
+    "node": "paljakka.fi",
+    "lat": 64.8729778,
+    "lon": 27.6552537,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "paljakka.fi-Lakeland"
+  },
+  {
+    "node": "visitlappeenranta.fi",
+    "lat": 61.0583713,
+    "lon": 28.1862742,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitlappeenranta.fi-Lakeland"
+  },
+  {
+    "node": "gosaimaa.com",
+    "lat": 61.1611958,
+    "lon": 28.0599716,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "gosaimaa.com-Lakeland"
+  },
+  {
+    "node": "visitkarelia.fi",
+    "lat": 62.6005753,
+    "lon": 29.7622128,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitkarelia.fi-Lakeland"
+  },
+  {
+    "node": "visitkajaani.fi",
+    "lat": 64.2240872,
+    "lon": 27.7334227,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitkajaani.fi-Lakeland"
+  },
+  {
+    "node": "visitoulu.fi",
+    "lat": 65.0118734,
+    "lon": 25.4716809,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitoulu.fi-Lapland"
+  },
+  {
+    "node": "visitjyvaskyla.fi",
+    "lat": 62.2417066,
+    "lon": 25.7495727,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitjyvaskyla.fi-Lakeland"
+  },
+  {
+    "node": "visithame.fi",
+    "lat": 60.9948584,
+    "lon": 24.46654,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visithame.fi-Lakeland"
+  },
+  {
+    "node": "kainuunliitto.fi",
+    "lat": 64.2240872,
+    "lon": 27.7334227,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "kainuunliitto.fi-Lakeland"
+  },
+  {
+    "node": "visitlahti.fi",
+    "lat": 60.9826014,
+    "lon": 25.6613764,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitlahti.fi-Lakeland"
+  },
+  {
+    "node": "visitkouvola.fi",
+    "lat": 60.8680928,
+    "lon": 26.7038517,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitkouvola.fi-Lakeland"
+  },
+  {
+    "node": "helsinkipartners.com",
+    "lat": 60.1674881,
+    "lon": 24.9427473,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "helsinkipartners.com-HelReg"
+  },
+  {
+    "node": "myhelsinki.fi",
+    "lat": 60.1674881,
+    "lon": 24.9427473,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "myhelsinki.fi-HelReg"
+  },
+  {
+    "node": "levi.fi",
+    "lat": 67.651985,
+    "lon": 24.9095086,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "levi.fi-Lapland"
+  },
+  {
+    "node": "visitkimitoon.fi",
+    "lat": 60.1660125,
+    "lon": 22.7385024,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitkimitoon.fi-C&A"
+  },
+  {
+    "node": "laplandnorth.fi",
+    "lat": 68.9062456,
+    "lon": 27.0260771,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "laplandnorth.fi-Lapland"
+  },
+  {
+    "node": "visitvarkaus.fi",
+    "lat": 62.3176377,
+    "lon": 27.8681227,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitvarkaus.fi-Lakeland"
+  },
+  {
+    "node": "visitmikkeli.fi",
+    "lat": 61.6877956,
+    "lon": 27.2726569,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitmikkeli.fi-Lakeland"
+  },
+  {
+    "node": "visitkemijarvi.fi",
+    "lat": 66.7161179,
+    "lon": 27.4333534,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitkemijarvi.fi-Lapland"
+  },
+  {
+    "node": "visittuusulanjarvi.fi",
+    "lat": 60.4743601,
+    "lon": 25.0925118,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visittuusulanjarvi.fi-HelReg"
+  },
+  {
+    "node": "visitsuomussalmi.fi",
+    "lat": 64.8847582,
+    "lon": 28.9145906,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitsuomussalmi.fi-Lakeland"
+  },
+  {
+    "node": "visitparainen.fi",
+    "lat": 60.3009089,
+    "lon": 22.302078,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitparainen.fi-C&A"
+  },
+  {
+    "node": "koli.fi",
+    "lat": 63.3178213,
+    "lon": 30.0191312,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "koli.fi-Lakeland"
+  },
+  {
+    "node": "pyha.fi",
+    "lat": 67.1095969,
+    "lon": 27.5118116,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "pyha.fi-Lapland"
+  },
+  {
+    "node": "visitaland.com",
+    "lat": 60.2166218,
+    "lon": 19.9438638,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitaland.com-C&A"
+  },
+  {
+    "node": "visitnaantali.com",
+    "lat": 60.4688687,
+    "lon": 22.0291149,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitnaantali.com-C&A"
+  },
+  {
+    "node": "visitkalajoki.fi",
+    "lat": 64.260017,
+    "lon": 23.950545,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitkalajoki.fi-Lapland"
+  },
+  {
+    "node": "vaasa.fi/koe-ja-nae",
+    "lat": 63.081820949999994,
+    "lon": 21.479812522296804,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "vaasa.fi/koe-ja-nae-C&A"
+  },
+  {
+    "node": "vasek.fi",
+    "lat": 63.081820949999994,
+    "lon": 21.479812522296804,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "vasek.fi-C&A"
+  },
+  {
+    "node": "helsinkinorth.fi",
+    "lat": 60.6335719,
+    "lon": 24.8695328,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "helsinkinorth.fi-HelReg"
+  },
+  {
+    "node": "visitrovaniemi.fi",
+    "lat": 66.5025657,
+    "lon": 25.73122,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitrovaniemi.fi-Lapland"
+  },
+  {
+    "node": "posiolapland.com",
+    "lat": 66.1092595,
+    "lon": 28.1650783,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "posiolapland.com-Lapland"
+  },
+  {
+    "node": "visitpietarsaarenseutu.fi",
+    "lat": 63.6744703,
+    "lon": 22.7055385,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitpietarsaarenseutu.fi-C&A"
+  },
+  {
+    "node": "discovermuonio.fi",
+    "lat": 67.9593397,
+    "lon": 23.6774037,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "discovermuonio.fi-Lapland"
+  },
+  {
+    "node": "visitsalo.fi",
+    "lat": 60.3846716,
+    "lon": 23.1286377,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitsalo.fi-C&A"
+  },
+  {
+    "node": "visitkotkahamina.fi",
+    "lat": 60.5688901,
+    "lon": 27.1881877,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitkotkahamina.fi-Lakeland"
+  },
+  {
+    "node": "visitporvoo.fi",
+    "lat": 60.3953913,
+    "lon": 25.6604862,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visitporvoo.fi-HelReg"
+  },
+  {
+    "node": "yllas.fi",
+    "lat": 67.3303348,
+    "lon": 23.7814738,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "yllas.fi-Lapland"
+  },
+  {
+    "node": "visitlakeus.fi",
+    "lat": 62.7954104,
+    "lon": 22.8442015,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitlakeus.fi-C&A"
+  },
+  {
+    "node": "pohjois-karjala.fi",
+    "lat": 62.6005753,
+    "lon": 29.7622128,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "pohjois-karjala.fi-Lakeland"
+  },
+  {
+    "node": "visitrauma.fi",
+    "lat": 61.1289148,
+    "lon": 21.5039401,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitrauma.fi-C&A"
+  },
+  {
+    "node": "exploreutsjoki.fi",
+    "lat": 69.907601,
+    "lon": 27.0252458,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "exploreutsjoki.fi-Lapland"
+  },
+  {
+    "node": "visitkristinestad.fi",
+    "lat": 62.2736018,
+    "lon": 21.3730807,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitkristinestad.fi-C&A"
+  },
+  {
+    "node": "experience365.fi",
+    "lat": 65.7333404,
+    "lon": 24.5666495,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "experience365.fi-Lapland"
+  },
+  {
+    "node": "keskisuomi.fi",
+    "lat": 62.2417066,
+    "lon": 25.7495727,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "keskisuomi.fi-Lakeland"
+  },
+  {
+    "node": "originallapland.com",
+    "lat": 66.3164258,
+    "lon": 23.6712997,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "originallapland.com-Lapland"
+  },
+  {
+    "node": "visitturkuarchipelago.fi",
+    "lat": 60.4517531,
+    "lon": 22.2670522,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitturkuarchipelago.fi-C&A"
+  },
+  {
+    "node": "sipoo.fi/en/visit-sipoo",
+    "lat": 60.376199,
+    "lon": 25.2651428,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "sipoo.fi/en/visit-sipoo-HelReg"
+  },
+  {
+    "node": "vantaa.fi/fi/visit-vantaa",
+    "lat": 60.2933337,
+    "lon": 25.0407809,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "vantaa.fi/fi/visit-vantaa-HelReg"
+  },
+  {
+    "node": "pohjois-savonmatkailu.fi",
+    "lat": 62.8924601,
+    "lon": 27.6781839,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "pohjois-savonmatkailu.fi-Lakeland"
+  }
+];
+      const connections = [
+  {
+    "node1": "visittampere.fi",
+    "node2": "visitfinland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visittampere.fi-visitfinland.com"
+  },
+  {
+    "node1": "visittampere.fi",
+    "node2": "visithame.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visittampere.fi-visithame.fi"
+  },
+  {
+    "node1": "visittampere.fi",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visittampere.fi-myhelsinki.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitraahe.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitraahe.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkokkola.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkokkola.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "arcticlakeland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-arcticlakeland.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitsalla.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitsalla.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-myhelsinki.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "laplandnorth.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-laplandnorth.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "ruka.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-ruka.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "levi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-levi.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitrovaniemi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitrovaniemi.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkotkahamina.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkotkahamina.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "yllas.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-yllas.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitlahti.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitlahti.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visithame.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visithame.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitaland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitaland.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitjyvaskyla.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitjyvaskyla.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "wildtaiga.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-wildtaiga.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitsavonlinna.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitsavonlinna.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitpori.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitpori.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitporvoo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitporvoo.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitespoo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitespoo.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitraseborg.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitraseborg.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkarelia.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitparainen.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitparainen.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visittuusulanjarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visittuusulanjarvi.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "pyha.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-pyha.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitoulu.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitoulu.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitmikkeli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitmikkeli.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitrauma.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitrauma.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "helsinkipartners.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-helsinkipartners.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitnaantali.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitnaantali.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkalajoki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkalajoki.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "discovermuonio.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-discovermuonio.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "gosaimaa.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-gosaimaa.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitsaimaa.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitsaimaa.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkristinestad.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkristinestad.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visithanko.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visithanko.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "posiolapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-posiolapland.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkouvola.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkouvola.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitturkuarchipelago.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitturkuarchipelago.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "vaasa.fi/koe-ja-nae",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-vaasa.fi/koe-ja-nae"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkimitoon.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkimitoon.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitlappeenranta.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitlappeenranta.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitlakeus.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitlakeus.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "koli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-koli.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "experience365.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-experience365.fi"
+  },
+  {
+    "node1": "visitraseborg.com",
+    "node2": "visithanko.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitraseborg.com-visithanko.fi"
+  },
+  {
+    "node1": "visitraseborg.com",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitraseborg.com-myhelsinki.fi"
+  },
+  {
+    "node1": "visitraseborg.com",
+    "node2": "visitkimitoon.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitraseborg.com-visitkimitoon.fi"
+  },
+  {
+    "node1": "visitkokkola.fi",
+    "node2": "visitkalajoki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkokkola.fi-visitkalajoki.fi"
+  },
+  {
+    "node1": "visitkokkola.fi",
+    "node2": "visitkristinestad.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkokkola.fi-visitkristinestad.fi"
+  },
+  {
+    "node1": "visitpori.fi",
+    "node2": "visitrauma.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitpori.fi-visitrauma.fi"
+  },
+  {
+    "node1": "visitraahe.fi",
+    "node2": "visitoulu.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitraahe.fi-visitoulu.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "wildtaiga.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-wildtaiga.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "paljakka.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-paljakka.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitkajaani.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitkajaani.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "kainuunliitto.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-kainuunliitto.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitmikkeli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitmikkeli.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "gosaimaa.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-gosaimaa.com"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitvarkaus.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitvarkaus.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitsavonlinna.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitsavonlinna.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitlappeenranta.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitlappeenranta.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "koli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-koli.fi"
+  },
+  {
+    "node1": "wildtaiga.fi",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "wildtaiga.fi-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "wildtaiga.fi",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "wildtaiga.fi-visitkarelia.fi"
+  },
+  {
+    "node1": "wildtaiga.fi",
+    "node2": "visitkajaani.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "wildtaiga.fi-visitkajaani.fi"
+  },
+  {
+    "node1": "wildtaiga.fi",
+    "node2": "kainuunliitto.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "wildtaiga.fi-kainuunliitto.fi"
+  },
+  {
+    "node1": "ruka.fi",
+    "node2": "pyha.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "ruka.fi-pyha.fi"
+  },
+  {
+    "node1": "ruka.fi",
+    "node2": "visitkemijarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "ruka.fi-visitkemijarvi.fi"
+  },
+  {
+    "node1": "visitsavonlinna.fi",
+    "node2": "visitsaimaa.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsavonlinna.fi-visitsaimaa.fi"
+  },
+  {
+    "node1": "visitsavonlinna.fi",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsavonlinna.fi-visitkarelia.fi"
+  },
+  {
+    "node1": "visitsaimaa.fi",
+    "node2": "gosaimaa.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsaimaa.fi-gosaimaa.com"
+  },
+  {
+    "node1": "visitsaimaa.fi",
+    "node2": "visitmikkeli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsaimaa.fi-visitmikkeli.fi"
+  },
+  {
+    "node1": "visitsaimaa.fi",
+    "node2": "visitvarkaus.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsaimaa.fi-visitvarkaus.fi"
+  },
+  {
+    "node1": "visithanko.fi",
+    "node2": "visitsalo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visithanko.fi-visitsalo.fi"
+  },
+  {
+    "node1": "visithanko.fi",
+    "node2": "visitkimitoon.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visithanko.fi-visitkimitoon.fi"
+  },
+  {
+    "node1": "visitsalla.fi",
+    "node2": "visitkemijarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsalla.fi-visitkemijarvi.fi"
+  },
+  {
+    "node1": "visitespoo.fi",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitespoo.fi-myhelsinki.fi"
+  },
+  {
+    "node1": "visitespoo.fi",
+    "node2": "visittuusulanjarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitespoo.fi-visittuusulanjarvi.fi"
+  },
+  {
+    "node1": "paljakka.fi",
+    "node2": "visitkajaani.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "paljakka.fi-visitkajaani.fi"
+  },
+  {
+    "node1": "visitlappeenranta.fi",
+    "node2": "gosaimaa.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitlappeenranta.fi-gosaimaa.com"
+  },
+  {
+    "node1": "visitlappeenranta.fi",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitlappeenranta.fi-visitkarelia.fi"
+  },
+  {
+    "node1": "gosaimaa.com",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "gosaimaa.com-visitkarelia.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "koli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-koli.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "visitmikkeli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-visitmikkeli.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "pohjois-karjala.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-pohjois-karjala.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "visitvarkaus.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-visitvarkaus.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "visitkajaani.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-visitkajaani.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "visitoulu.fi",
+    "node2": "visitkalajoki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitoulu.fi-visitkalajoki.fi"
+  },
+  {
+    "node1": "visitoulu.fi",
+    "node2": "experience365.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitoulu.fi-experience365.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "visitlahti.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-visitlahti.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "keskisuomi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-keskisuomi.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "visitrauma.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-visitrauma.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "visitporvoo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-visitporvoo.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-myhelsinki.fi"
+  },
+  {
+    "node1": "visithame.fi",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visithame.fi-myhelsinki.fi"
+  },
+  {
+    "node1": "kainuunliitto.fi",
+    "node2": "pohjois-karjala.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "kainuunliitto.fi-pohjois-karjala.fi"
+  },
+  {
+    "node1": "kainuunliitto.fi",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "kainuunliitto.fi-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "visitlahti.fi",
+    "node2": "helsinkipartners.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitlahti.fi-helsinkipartners.com"
+  },
+  {
+    "node1": "helsinkipartners.com",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "helsinkipartners.com-myhelsinki.fi"
+  },
+  {
+    "node1": "myhelsinki.fi",
+    "node2": "visittuusulanjarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "myhelsinki.fi-visittuusulanjarvi.fi"
+  },
+  {
+    "node1": "levi.fi",
+    "node2": "originallapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "levi.fi-originallapland.com"
+  },
+  {
+    "node1": "levi.fi",
+    "node2": "yllas.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "levi.fi-yllas.fi"
+  },
+  {
+    "node1": "laplandnorth.fi",
+    "node2": "exploreutsjoki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "laplandnorth.fi-exploreutsjoki.fi"
+  },
+  {
+    "node1": "laplandnorth.fi",
+    "node2": "visitrovaniemi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "laplandnorth.fi-visitrovaniemi.fi"
+  },
+  {
+    "node1": "laplandnorth.fi",
+    "node2": "yllas.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "laplandnorth.fi-yllas.fi"
+  },
+  {
+    "node1": "visitkemijarvi.fi",
+    "node2": "pyha.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkemijarvi.fi-pyha.fi"
+  },
+  {
+    "node1": "visitkemijarvi.fi",
+    "node2": "visitrovaniemi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkemijarvi.fi-visitrovaniemi.fi"
+  },
+  {
+    "node1": "visitkemijarvi.fi",
+    "node2": "posiolapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkemijarvi.fi-posiolapland.com"
+  },
+  {
+    "node1": "visittuusulanjarvi.fi",
+    "node2": "visitporvoo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visittuusulanjarvi.fi-visitporvoo.fi"
+  },
+  {
+    "node1": "visitparainen.fi",
+    "node2": "visitnaantali.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitparainen.fi-visitnaantali.com"
+  },
+  {
+    "node1": "visitparainen.fi",
+    "node2": "visitaland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitparainen.fi-visitaland.com"
+  },
+  {
+    "node1": "pyha.fi",
+    "node2": "visitrovaniemi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "pyha.fi-visitrovaniemi.fi"
+  },
+  {
+    "node1": "pyha.fi",
+    "node2": "posiolapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "pyha.fi-posiolapland.com"
+  },
+  {
+    "node1": "vaasa.fi/koe-ja-nae",
+    "node2": "vasek.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "vaasa.fi/koe-ja-nae-vasek.fi"
+  },
+  {
+    "node1": "visitrovaniemi.fi",
+    "node2": "experience365.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitrovaniemi.fi-experience365.fi"
+  },
+  {
+    "node1": "visitrovaniemi.fi",
+    "node2": "posiolapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitrovaniemi.fi-posiolapland.com"
+  },
+  {
+    "node1": "visitrovaniemi.fi",
+    "node2": "yllas.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitrovaniemi.fi-yllas.fi"
+  },
+  {
+    "node1": "discovermuonio.fi",
+    "node2": "originallapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "discovermuonio.fi-originallapland.com"
+  },
+  {
+    "node1": "yllas.fi",
+    "node2": "originallapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "yllas.fi-originallapland.com"
+  }
+];
+      const all_cities = [
+  {
+    "node": "visittampere.fi",
+    "lat": 61.4980214,
+    "lon": 23.7603118,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visittampere.fi-Lakeland"
+  },
+  {
+    "node": "visitfinland.com",
+    "lat": 63.3706192,
+    "lon": 25.5754689,
+    "size": 11,
+    "color": "Red",
+    "shape": "square",
+    "node_hover": "visitfinland.com-Finland"
+  },
+  {
+    "node": "visitraseborg.com",
+    "lat": 59.9285263,
+    "lon": 23.52192344963455,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visitraseborg.com-HelReg"
+  },
+  {
+    "node": "visitkokkola.fi",
+    "lat": 63.8391421,
+    "lon": 23.1336845,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitkokkola.fi-C&A"
+  },
+  {
+    "node": "visitpori.fi",
+    "lat": 61.4865443,
+    "lon": 21.7968859,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitpori.fi-C&A"
+  },
+  {
+    "node": "visitraahe.fi",
+    "lat": 64.6795905,
+    "lon": 24.4709593,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitraahe.fi-Lapland"
+  },
+  {
+    "node": "arcticlakeland.com",
+    "lat": 64.2240872,
+    "lon": 27.7334227,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "arcticlakeland.com-Lakeland"
+  },
+  {
+    "node": "wildtaiga.fi",
+    "lat": 64.1261745,
+    "lon": 29.519515,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "wildtaiga.fi-Lakeland"
+  },
+  {
+    "node": "ruka.fi",
+    "lat": 65.9645637,
+    "lon": 29.1883283,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "ruka.fi-Lapland"
+  },
+  {
+    "node": "visitsavonlinna.fi",
+    "lat": 61.8689933,
+    "lon": 28.8797178,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitsavonlinna.fi-Lakeland"
+  },
+  {
+    "node": "visitsaimaa.fi",
+    "lat": 61.1611958,
+    "lon": 28.0599716,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitsaimaa.fi-Lakeland"
+  },
+  {
+    "node": "visithanko.fi",
+    "lat": 59.8228008,
+    "lon": 22.9695005,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visithanko.fi-HelReg"
+  },
+  {
+    "node": "visitsalla.fi",
+    "lat": 66.8318774,
+    "lon": 28.6668631,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitsalla.fi-Lapland"
+  },
+  {
+    "node": "visitespoo.fi",
+    "lat": 60.2047672,
+    "lon": 24.6568435,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visitespoo.fi-HelReg"
+  },
+  {
+    "node": "paljakka.fi",
+    "lat": 64.8729778,
+    "lon": 27.6552537,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "paljakka.fi-Lakeland"
+  },
+  {
+    "node": "visitlappeenranta.fi",
+    "lat": 61.0583713,
+    "lon": 28.1862742,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitlappeenranta.fi-Lakeland"
+  },
+  {
+    "node": "gosaimaa.com",
+    "lat": 61.1611958,
+    "lon": 28.0599716,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "gosaimaa.com-Lakeland"
+  },
+  {
+    "node": "visitkarelia.fi",
+    "lat": 62.6005753,
+    "lon": 29.7622128,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitkarelia.fi-Lakeland"
+  },
+  {
+    "node": "visitkajaani.fi",
+    "lat": 64.2240872,
+    "lon": 27.7334227,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitkajaani.fi-Lakeland"
+  },
+  {
+    "node": "visitoulu.fi",
+    "lat": 65.0118734,
+    "lon": 25.4716809,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitoulu.fi-Lapland"
+  },
+  {
+    "node": "visitjyvaskyla.fi",
+    "lat": 62.2417066,
+    "lon": 25.7495727,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitjyvaskyla.fi-Lakeland"
+  },
+  {
+    "node": "visithame.fi",
+    "lat": 60.9948584,
+    "lon": 24.46654,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visithame.fi-Lakeland"
+  },
+  {
+    "node": "kainuunliitto.fi",
+    "lat": 64.2240872,
+    "lon": 27.7334227,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "kainuunliitto.fi-Lakeland"
+  },
+  {
+    "node": "visitlahti.fi",
+    "lat": 60.9826014,
+    "lon": 25.6613764,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitlahti.fi-Lakeland"
+  },
+  {
+    "node": "visitkouvola.fi",
+    "lat": 60.8680928,
+    "lon": 26.7038517,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitkouvola.fi-Lakeland"
+  },
+  {
+    "node": "helsinkipartners.com",
+    "lat": 60.1674881,
+    "lon": 24.9427473,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "helsinkipartners.com-HelReg"
+  },
+  {
+    "node": "myhelsinki.fi",
+    "lat": 60.1674881,
+    "lon": 24.9427473,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "myhelsinki.fi-HelReg"
+  },
+  {
+    "node": "levi.fi",
+    "lat": 67.651985,
+    "lon": 24.9095086,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "levi.fi-Lapland"
+  },
+  {
+    "node": "visitkimitoon.fi",
+    "lat": 60.1660125,
+    "lon": 22.7385024,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitkimitoon.fi-C&A"
+  },
+  {
+    "node": "laplandnorth.fi",
+    "lat": 68.9062456,
+    "lon": 27.0260771,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "laplandnorth.fi-Lapland"
+  },
+  {
+    "node": "visitvarkaus.fi",
+    "lat": 62.3176377,
+    "lon": 27.8681227,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitvarkaus.fi-Lakeland"
+  },
+  {
+    "node": "visitmikkeli.fi",
+    "lat": 61.6877956,
+    "lon": 27.2726569,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitmikkeli.fi-Lakeland"
+  },
+  {
+    "node": "visitkemijarvi.fi",
+    "lat": 66.7161179,
+    "lon": 27.4333534,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitkemijarvi.fi-Lapland"
+  },
+  {
+    "node": "visittuusulanjarvi.fi",
+    "lat": 60.4743601,
+    "lon": 25.0925118,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visittuusulanjarvi.fi-HelReg"
+  },
+  {
+    "node": "visitsuomussalmi.fi",
+    "lat": 64.8847582,
+    "lon": 28.9145906,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitsuomussalmi.fi-Lakeland"
+  },
+  {
+    "node": "visitparainen.fi",
+    "lat": 60.3009089,
+    "lon": 22.302078,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitparainen.fi-C&A"
+  },
+  {
+    "node": "koli.fi",
+    "lat": 63.3178213,
+    "lon": 30.0191312,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "koli.fi-Lakeland"
+  },
+  {
+    "node": "pyha.fi",
+    "lat": 67.1095969,
+    "lon": 27.5118116,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "pyha.fi-Lapland"
+  },
+  {
+    "node": "visitaland.com",
+    "lat": 60.2166218,
+    "lon": 19.9438638,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitaland.com-C&A"
+  },
+  {
+    "node": "visitnaantali.com",
+    "lat": 60.4688687,
+    "lon": 22.0291149,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitnaantali.com-C&A"
+  },
+  {
+    "node": "visitkalajoki.fi",
+    "lat": 64.260017,
+    "lon": 23.950545,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitkalajoki.fi-Lapland"
+  },
+  {
+    "node": "vaasa.fi/koe-ja-nae",
+    "lat": 63.081820949999994,
+    "lon": 21.479812522296804,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "vaasa.fi/koe-ja-nae-C&A"
+  },
+  {
+    "node": "vasek.fi",
+    "lat": 63.081820949999994,
+    "lon": 21.479812522296804,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "vasek.fi-C&A"
+  },
+  {
+    "node": "helsinkinorth.fi",
+    "lat": 60.6335719,
+    "lon": 24.8695328,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "helsinkinorth.fi-HelReg"
+  },
+  {
+    "node": "visitrovaniemi.fi",
+    "lat": 66.5025657,
+    "lon": 25.73122,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "visitrovaniemi.fi-Lapland"
+  },
+  {
+    "node": "posiolapland.com",
+    "lat": 66.1092595,
+    "lon": 28.1650783,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "posiolapland.com-Lapland"
+  },
+  {
+    "node": "visitpietarsaarenseutu.fi",
+    "lat": 63.6744703,
+    "lon": 22.7055385,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitpietarsaarenseutu.fi-C&A"
+  },
+  {
+    "node": "discovermuonio.fi",
+    "lat": 67.9593397,
+    "lon": 23.6774037,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "discovermuonio.fi-Lapland"
+  },
+  {
+    "node": "visitsalo.fi",
+    "lat": 60.3846716,
+    "lon": 23.1286377,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitsalo.fi-C&A"
+  },
+  {
+    "node": "visitkotkahamina.fi",
+    "lat": 60.5688901,
+    "lon": 27.1881877,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "visitkotkahamina.fi-Lakeland"
+  },
+  {
+    "node": "visitporvoo.fi",
+    "lat": 60.3953913,
+    "lon": 25.6604862,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "visitporvoo.fi-HelReg"
+  },
+  {
+    "node": "yllas.fi",
+    "lat": 67.3303348,
+    "lon": 23.7814738,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "yllas.fi-Lapland"
+  },
+  {
+    "node": "visitlakeus.fi",
+    "lat": 62.7954104,
+    "lon": 22.8442015,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitlakeus.fi-C&A"
+  },
+  {
+    "node": "pohjois-karjala.fi",
+    "lat": 62.6005753,
+    "lon": 29.7622128,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "pohjois-karjala.fi-Lakeland"
+  },
+  {
+    "node": "visitrauma.fi",
+    "lat": 61.1289148,
+    "lon": 21.5039401,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitrauma.fi-C&A"
+  },
+  {
+    "node": "exploreutsjoki.fi",
+    "lat": 69.907601,
+    "lon": 27.0252458,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "exploreutsjoki.fi-Lapland"
+  },
+  {
+    "node": "visitkristinestad.fi",
+    "lat": 62.2736018,
+    "lon": 21.3730807,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitkristinestad.fi-C&A"
+  },
+  {
+    "node": "experience365.fi",
+    "lat": 65.7333404,
+    "lon": 24.5666495,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "experience365.fi-Lapland"
+  },
+  {
+    "node": "keskisuomi.fi",
+    "lat": 62.2417066,
+    "lon": 25.7495727,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "keskisuomi.fi-Lakeland"
+  },
+  {
+    "node": "originallapland.com",
+    "lat": 66.3164258,
+    "lon": 23.6712997,
+    "size": 11,
+    "color": "pink",
+    "shape": "square",
+    "node_hover": "originallapland.com-Lapland"
+  },
+  {
+    "node": "visitturkuarchipelago.fi",
+    "lat": 60.4517531,
+    "lon": 22.2670522,
+    "size": 11,
+    "color": "blue",
+    "shape": "square",
+    "node_hover": "visitturkuarchipelago.fi-C&A"
+  },
+  {
+    "node": "sipoo.fi/en/visit-sipoo",
+    "lat": 60.376199,
+    "lon": 25.2651428,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "sipoo.fi/en/visit-sipoo-HelReg"
+  },
+  {
+    "node": "vantaa.fi/fi/visit-vantaa",
+    "lat": 60.2933337,
+    "lon": 25.0407809,
+    "size": 11,
+    "color": "green",
+    "shape": "square",
+    "node_hover": "vantaa.fi/fi/visit-vantaa-HelReg"
+  },
+  {
+    "node": "pohjois-savonmatkailu.fi",
+    "lat": 62.8924601,
+    "lon": 27.6781839,
+    "size": 11,
+    "color": "purple",
+    "shape": "square",
+    "node_hover": "pohjois-savonmatkailu.fi-Lakeland"
+  }
+];
+      const all_connections = [
+  {
+    "node1": "visittampere.fi",
+    "node2": "visitfinland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visittampere.fi-visitfinland.com"
+  },
+  {
+    "node1": "visittampere.fi",
+    "node2": "visithame.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visittampere.fi-visithame.fi"
+  },
+  {
+    "node1": "visittampere.fi",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visittampere.fi-myhelsinki.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitraahe.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitraahe.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkokkola.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkokkola.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "arcticlakeland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-arcticlakeland.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitsalla.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitsalla.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-myhelsinki.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "laplandnorth.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-laplandnorth.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "ruka.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-ruka.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "levi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-levi.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitrovaniemi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitrovaniemi.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkotkahamina.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkotkahamina.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "yllas.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-yllas.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitlahti.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitlahti.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visithame.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visithame.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitaland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitaland.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitjyvaskyla.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitjyvaskyla.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "wildtaiga.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-wildtaiga.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitsavonlinna.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitsavonlinna.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitpori.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitpori.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitporvoo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitporvoo.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitespoo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitespoo.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitraseborg.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitraseborg.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkarelia.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitparainen.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitparainen.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visittuusulanjarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visittuusulanjarvi.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "pyha.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-pyha.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitoulu.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitoulu.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitmikkeli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitmikkeli.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitrauma.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitrauma.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "helsinkipartners.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-helsinkipartners.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitnaantali.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitnaantali.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkalajoki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkalajoki.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "discovermuonio.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-discovermuonio.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "gosaimaa.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-gosaimaa.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitsaimaa.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitsaimaa.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkristinestad.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkristinestad.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visithanko.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visithanko.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "posiolapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-posiolapland.com"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkouvola.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkouvola.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitturkuarchipelago.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitturkuarchipelago.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "vaasa.fi/koe-ja-nae",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-vaasa.fi/koe-ja-nae"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitkimitoon.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitkimitoon.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitlappeenranta.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitlappeenranta.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "visitlakeus.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-visitlakeus.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "koli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-koli.fi"
+  },
+  {
+    "node1": "visitfinland.com",
+    "node2": "experience365.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitfinland.com-experience365.fi"
+  },
+  {
+    "node1": "visitraseborg.com",
+    "node2": "visithanko.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitraseborg.com-visithanko.fi"
+  },
+  {
+    "node1": "visitraseborg.com",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitraseborg.com-myhelsinki.fi"
+  },
+  {
+    "node1": "visitraseborg.com",
+    "node2": "visitkimitoon.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitraseborg.com-visitkimitoon.fi"
+  },
+  {
+    "node1": "visitkokkola.fi",
+    "node2": "visitkalajoki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkokkola.fi-visitkalajoki.fi"
+  },
+  {
+    "node1": "visitkokkola.fi",
+    "node2": "visitkristinestad.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkokkola.fi-visitkristinestad.fi"
+  },
+  {
+    "node1": "visitpori.fi",
+    "node2": "visitrauma.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitpori.fi-visitrauma.fi"
+  },
+  {
+    "node1": "visitraahe.fi",
+    "node2": "visitoulu.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitraahe.fi-visitoulu.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "wildtaiga.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-wildtaiga.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "paljakka.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-paljakka.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitkajaani.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitkajaani.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "kainuunliitto.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-kainuunliitto.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitmikkeli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitmikkeli.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "gosaimaa.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-gosaimaa.com"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitvarkaus.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitvarkaus.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitsavonlinna.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitsavonlinna.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "visitlappeenranta.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-visitlappeenranta.fi"
+  },
+  {
+    "node1": "arcticlakeland.com",
+    "node2": "koli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "arcticlakeland.com-koli.fi"
+  },
+  {
+    "node1": "wildtaiga.fi",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "wildtaiga.fi-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "wildtaiga.fi",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "wildtaiga.fi-visitkarelia.fi"
+  },
+  {
+    "node1": "wildtaiga.fi",
+    "node2": "visitkajaani.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "wildtaiga.fi-visitkajaani.fi"
+  },
+  {
+    "node1": "wildtaiga.fi",
+    "node2": "kainuunliitto.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "wildtaiga.fi-kainuunliitto.fi"
+  },
+  {
+    "node1": "ruka.fi",
+    "node2": "pyha.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "ruka.fi-pyha.fi"
+  },
+  {
+    "node1": "ruka.fi",
+    "node2": "visitkemijarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "ruka.fi-visitkemijarvi.fi"
+  },
+  {
+    "node1": "visitsavonlinna.fi",
+    "node2": "visitsaimaa.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsavonlinna.fi-visitsaimaa.fi"
+  },
+  {
+    "node1": "visitsavonlinna.fi",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsavonlinna.fi-visitkarelia.fi"
+  },
+  {
+    "node1": "visitsaimaa.fi",
+    "node2": "gosaimaa.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsaimaa.fi-gosaimaa.com"
+  },
+  {
+    "node1": "visitsaimaa.fi",
+    "node2": "visitmikkeli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsaimaa.fi-visitmikkeli.fi"
+  },
+  {
+    "node1": "visitsaimaa.fi",
+    "node2": "visitvarkaus.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsaimaa.fi-visitvarkaus.fi"
+  },
+  {
+    "node1": "visithanko.fi",
+    "node2": "visitsalo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visithanko.fi-visitsalo.fi"
+  },
+  {
+    "node1": "visithanko.fi",
+    "node2": "visitkimitoon.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visithanko.fi-visitkimitoon.fi"
+  },
+  {
+    "node1": "visitsalla.fi",
+    "node2": "visitkemijarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitsalla.fi-visitkemijarvi.fi"
+  },
+  {
+    "node1": "visitespoo.fi",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitespoo.fi-myhelsinki.fi"
+  },
+  {
+    "node1": "visitespoo.fi",
+    "node2": "visittuusulanjarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitespoo.fi-visittuusulanjarvi.fi"
+  },
+  {
+    "node1": "paljakka.fi",
+    "node2": "visitkajaani.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "paljakka.fi-visitkajaani.fi"
+  },
+  {
+    "node1": "visitlappeenranta.fi",
+    "node2": "gosaimaa.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitlappeenranta.fi-gosaimaa.com"
+  },
+  {
+    "node1": "visitlappeenranta.fi",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitlappeenranta.fi-visitkarelia.fi"
+  },
+  {
+    "node1": "gosaimaa.com",
+    "node2": "visitkarelia.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "gosaimaa.com-visitkarelia.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "koli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-koli.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "visitmikkeli.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-visitmikkeli.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "pohjois-karjala.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-pohjois-karjala.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "visitvarkaus.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-visitvarkaus.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "visitkajaani.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-visitkajaani.fi"
+  },
+  {
+    "node1": "visitkarelia.fi",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkarelia.fi-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "visitoulu.fi",
+    "node2": "visitkalajoki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitoulu.fi-visitkalajoki.fi"
+  },
+  {
+    "node1": "visitoulu.fi",
+    "node2": "experience365.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitoulu.fi-experience365.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "visitlahti.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-visitlahti.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "keskisuomi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-keskisuomi.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "visitrauma.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-visitrauma.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "visitporvoo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-visitporvoo.fi"
+  },
+  {
+    "node1": "visitjyvaskyla.fi",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitjyvaskyla.fi-myhelsinki.fi"
+  },
+  {
+    "node1": "visithame.fi",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visithame.fi-myhelsinki.fi"
+  },
+  {
+    "node1": "kainuunliitto.fi",
+    "node2": "pohjois-karjala.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "kainuunliitto.fi-pohjois-karjala.fi"
+  },
+  {
+    "node1": "kainuunliitto.fi",
+    "node2": "visitsuomussalmi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "kainuunliitto.fi-visitsuomussalmi.fi"
+  },
+  {
+    "node1": "visitlahti.fi",
+    "node2": "helsinkipartners.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitlahti.fi-helsinkipartners.com"
+  },
+  {
+    "node1": "helsinkipartners.com",
+    "node2": "myhelsinki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "helsinkipartners.com-myhelsinki.fi"
+  },
+  {
+    "node1": "myhelsinki.fi",
+    "node2": "visittuusulanjarvi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "myhelsinki.fi-visittuusulanjarvi.fi"
+  },
+  {
+    "node1": "levi.fi",
+    "node2": "originallapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "levi.fi-originallapland.com"
+  },
+  {
+    "node1": "levi.fi",
+    "node2": "yllas.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "levi.fi-yllas.fi"
+  },
+  {
+    "node1": "laplandnorth.fi",
+    "node2": "exploreutsjoki.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "laplandnorth.fi-exploreutsjoki.fi"
+  },
+  {
+    "node1": "laplandnorth.fi",
+    "node2": "visitrovaniemi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "laplandnorth.fi-visitrovaniemi.fi"
+  },
+  {
+    "node1": "laplandnorth.fi",
+    "node2": "yllas.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "laplandnorth.fi-yllas.fi"
+  },
+  {
+    "node1": "visitkemijarvi.fi",
+    "node2": "pyha.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkemijarvi.fi-pyha.fi"
+  },
+  {
+    "node1": "visitkemijarvi.fi",
+    "node2": "visitrovaniemi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkemijarvi.fi-visitrovaniemi.fi"
+  },
+  {
+    "node1": "visitkemijarvi.fi",
+    "node2": "posiolapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitkemijarvi.fi-posiolapland.com"
+  },
+  {
+    "node1": "visittuusulanjarvi.fi",
+    "node2": "visitporvoo.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visittuusulanjarvi.fi-visitporvoo.fi"
+  },
+  {
+    "node1": "visitparainen.fi",
+    "node2": "visitnaantali.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitparainen.fi-visitnaantali.com"
+  },
+  {
+    "node1": "visitparainen.fi",
+    "node2": "visitaland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitparainen.fi-visitaland.com"
+  },
+  {
+    "node1": "pyha.fi",
+    "node2": "visitrovaniemi.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "pyha.fi-visitrovaniemi.fi"
+  },
+  {
+    "node1": "pyha.fi",
+    "node2": "posiolapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "pyha.fi-posiolapland.com"
+  },
+  {
+    "node1": "vaasa.fi/koe-ja-nae",
+    "node2": "vasek.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "vaasa.fi/koe-ja-nae-vasek.fi"
+  },
+  {
+    "node1": "visitrovaniemi.fi",
+    "node2": "experience365.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitrovaniemi.fi-experience365.fi"
+  },
+  {
+    "node1": "visitrovaniemi.fi",
+    "node2": "posiolapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitrovaniemi.fi-posiolapland.com"
+  },
+  {
+    "node1": "visitrovaniemi.fi",
+    "node2": "yllas.fi",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "visitrovaniemi.fi-yllas.fi"
+  },
+  {
+    "node1": "discovermuonio.fi",
+    "node2": "originallapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "discovermuonio.fi-originallapland.com"
+  },
+  {
+    "node1": "yllas.fi",
+    "node2": "originallapland.com",
+    "color": "black",
+    "width": 1,
+    "style": "solid",
+    "arrow": false,
+    "curve": false,
+    "edge_hover": "yllas.fi-originallapland.com"
+  }
+];
+      const total_nodes = 64;
+      const total_edges = 125;
+      let selectedNode = null;
+      let selectedColor = ['all'];
+      let selectedHover = ['all'];
+      let latMin = -90;
+      let latMax = 90;
+      let lonMin = -180;
+      let lonMax = 180;
+
+      const map = L.map('map').setView([20, 0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      
+
+
+      const titleDiv = document.getElementById('map-title');
+      const draggable = new L.Draggable(titleDiv);
+      draggable.enable();
+
+      map.getContainer().style.position = 'relative';
+
+      // Initialize marker cluster group and edges layer
+      const markers = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        disableClusteringAtZoom: 10,
+        spiderfyOnMaxZoom: true
+      });
+      const edges = L.layerGroup();
+      map.addLayer(markers);
+      map.addLayer(edges);
+
+      // Function to create a marker for a city
+      function createMarker(city) {
+        let iconHtml = '';
+        const size = city.size * 2;
+
+        if (city.shape === "circle") {
+          iconHtml = `<div style="width:${size}px;height:${size}px;background:${city.color};border-radius:50%;opacity:0.8;"></div>`;
+        } else if (city.shape === "square") {
+          iconHtml = `<div style="width:${size}px;height:${size}px;background:${city.color};opacity:0.8;"></div>`;
+        } else if (city.shape === "star") {
+          iconHtml = `
+            <svg width="${size}" height="${size}" viewBox="0 0 100 100">
+              <polygon points="50,5 61,35 95,35 67,57 76,91 50,70 24,91 33,57 5,35 39,35"
+                fill="${city.color}" opacity="0.8" />
+            </svg>`;
+        }
+
+        const icon = L.divIcon({
+          html: iconHtml,
+          className: "",
+          iconSize: [size, size]
+        });
+
+        const marker = L.marker([city.lat, city.lon], {
+          icon: icon
+        });
+
+        if (city.node_hover) {
+          marker.bindTooltip(city.node_hover, {
+            direction: 'top',
+            permanent: false,
+            opacity: 0.9
+          });
+        }
+
+        marker.bindPopup(city.node);
+
+        marker.on('click', () => {
+          selectedNode = city.node;
+          debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+        });
+
+        return marker;
+      }
+
+      function generateBezierPoints(p0, p1, p2, numPoints) {
+        const points = [p0];
+        for (let t = 1 / (numPoints - 1); t < 1; t += 1 / (numPoints - 1)) {
+          const u = 1 - t;
+          const tt = t * t;
+          const uu = u * u;
+          const lat = uu * p0[0] + 2 * u * t * p1[0] + tt * p2[0];
+          const lon = uu * p0[1] + 2 * u * t * p1[1] + tt * p2[1];
+          points.push([lat, lon]);
+        }
+        points.push(p2);
+        return points;
+      }
+
+      // Debounce function to limit update frequency
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      function updateNodes(maxNodes) {
+        document.getElementById('node-count').textContent = maxNodes + ' / ' + total_nodes;
+        let filteredCities = all_cities;
+
+        // Apply color filter
+        if (selectedColor[0] !== 'all' && selectedColor.length > 0) {
+          filteredCities = filteredCities.filter(city => selectedColor.includes(city.color));
+        }
+
+        // Apply hover filter
+        if (selectedHover[0] !== 'all' && selectedHover.length > 0) {
+          filteredCities = filteredCities.filter(city => selectedHover.includes(city.node_hover));
+        }
+
+        // Apply lat/lon range filter
+        filteredCities = filteredCities.filter(city =>
+          city.lat >= latMin && city.lat <= latMax &&
+          city.lon >= lonMin && city.lon <= lonMax
+        );
+
+        // Apply max nodes limit
+        const sortedCities = filteredCities.sort((a, b) => b.size - a.size).slice(0, maxNodes);
+        const selectedCitynodes = new Set(sortedCities.map(city => city.node));
+
+        // Get visible bounds
+        const bounds = map.getBounds();
+        const visibleCities = sortedCities.filter(city =>
+          bounds.contains([city.lat, city.lon])
+        );
+        const visibleCitynodes = new Set(visibleCities.map(city => city.node));
+
+        // Clear existing markers, edges, and hover labels
+        markers.clearLayers();
+        edges.clearLayers();
+        map.eachLayer(layer => {
+          if (layer instanceof L.Marker && layer.options.icon.options.className === 'arrow-label') {
+            map.removeLayer(layer);
+          }
+        });
+
+        // Add markers for visible cities
+        visibleCities.forEach(city => {
+          const marker = createMarker(city);
+          if (selectedNode && city.node !== selectedNode && !all_connections.some(link =>
+            (link.node1 === selectedNode && link.node2 === city.node) ||
+            (link.node2 === selectedNode && link.node1 === city.node))) {
+            marker.setOpacity(0.3);
+          } else {
+            marker.setOpacity(1);
+          }
+          markers.addLayer(marker);
+        });
+
+        // Filter connections to include edges between visible nodes or connected to selectedNode
+        const filteredConnections = all_connections.filter(link =>
+          (visibleCitynodes.has(link.node1) && visibleCitynodes.has(link.node2)) ||
+          (selectedNode && (link.node1 === selectedNode || link.node2 === selectedNode))
+        );
+
+        // Update node count to reflect visible nodes out of filtered total
+        document.getElementById('node-count').textContent = visibleCities.length + ' / ' + sortedCities.length;
+
+        // Update edge count display
+        document.getElementById('edge-count').textContent = filteredConnections.length + ' / ' + total_edges;
+
+        // Detect bidirectional edges
+        const bidirectionalEdges = new Set();
+        filteredConnections.forEach((link, index) => {
+          const reverseLink = filteredConnections.find((l, i) => i !== index && l.node1 === link.node2 && l.node2 === link.node1);
+          if (reverseLink) {
+            bidirectionalEdges.add(`${link.node1}-${link.node2}`);
+            bidirectionalEdges.add(`${link.node2}-${link.node1}`);
+          }
+        });
+
+        filteredConnections.forEach(link => {
+          const fromCity = all_cities.find(c => c.node === link.node1);
+          const toCity = all_cities.find(c => c.node === link.node2);
+          // Skip if either node is missing
+          if (!fromCity || !toCity) return;
+          
+          const from = [fromCity.lat, fromCity.lon];
+          const to = [toCity.lat, toCity.lon];
+
+          let latlngs = [from, to];
+          const edgeKey = `${link.node1}-${link.node2}`;
+          const isBidirectional = bidirectionalEdges.has(edgeKey);
+          const shouldCurve = link.curve || isBidirectional;
+
+          if (shouldCurve) {
+            const midLat = (from[0] + to[0]) / 2;
+            const midLon = (from[1] + to[1]) / 2;
+            const latDiff = to[0] - from[0];
+            const lonDiff = to[1] - from[1];
+            const length = Math.sqrt(latDiff * latDiff + lonDiff * lonDiff);
+            const baseOffsetMagnitude = Math.min(length * 0.1, 5);
+            const perpLat = -lonDiff / length * baseOffsetMagnitude;
+            const perpLon = latDiff / length * baseOffsetMagnitude;
+
+            let controlLat, controlLon;
+            if (isBidirectional) {
+              const isReverse = link.node1 > link.node2;
+              const bidirectionalOffset = baseOffsetMagnitude * 2;
+              controlLat = midLat + (isReverse ? -perpLat * 2 : perpLat * 2) + (isReverse ? bidirectionalOffset : -bidirectionalOffset);
+              controlLon = midLon + (isReverse ? -perpLon * 2 : perpLon * 2) + (isReverse ? bidirectionalOffset : -bidirectionalOffset);
+            } else {
+              controlLat = midLat + perpLat;
+              controlLon = midLon + perpLon;
+            }
+
+            latlngs = generateBezierPoints(from, [controlLat, controlLon], to, 50);
+          }
+
+          const lineStyle = {
+            color: link.color,
+            weight: link.width,
+            dashArray:
+              link.style === "dashed" ? "5, 10" :
+              link.style === "dotted" ? "2, 6" : null,
+            opacity: selectedNode && !(link.node1 === selectedNode || link.node2 === selectedNode) ? 0.3 : 1
+          };
+
+          const polyline = L.polyline(latlngs, {
+            ...lineStyle
+          }).addTo(edges);
+
+          if (link.arrow) {
+            const arrowSize = Math.max(10, link.width * 4);
+            polyline.setText('▶', {
+              repeat: false,
+              center: true,
+              offset: 0,
+              attributes: {
+                fill: link.color,
+                "font-size": `${arrowSize}`,
+                "font-weight": "bold",
+                "dy": `${arrowSize / 3}`,
+                opacity: selectedNode && !(link.node1 === selectedNode || link.node2 === selectedNode) ? 0.3 : 1
+              }
+            });
+          }
+
+          const hoverLabel = L.marker([0, 0], {
+            icon: L.divIcon({
+              className: 'arrow-label',
+              html: link.edge_hover || `${link.node1} → ${link.node2}`,
+              iconSize: null
+            }),
+            interactive: false
+          });
+
+          const hoverLine = L.polyline(latlngs, {
+            color: '#0000',
+            weight: Math.max(link.width + 10, 15),
+            opacity: 0,
+            interactive: true
+          }).addTo(edges);
+
+          hoverLine.on("mouseover", (e) => {
+            hoverLabel.setLatLng(e.latlng);
+            map.addLayer(hoverLabel);
+          });
+          hoverLine.on("mouseout", () => {
+            if (map.hasLayer(hoverLabel)) {
+              map.removeLayer(hoverLabel);
+            }
+          });
+          hoverLine.on("click", () => {
+            if (map.hasLayer(hoverLabel)) {
+              map.removeLayer(hoverLabel);
+            }
+          });
+        });
+      }
+
+      // Debounced update function
+      const debouncedUpdateNodes = debounce(updateNodes, 300);
+
+      // Toggle controls visibility
+      const toggleButton = document.getElementById('toggle-controls');
+      const controlsDiv = document.getElementById('controls');
+      toggleButton.addEventListener('click', () => {
+        if (controlsDiv.style.display === 'none') {
+          controlsDiv.style.display = 'block';
+          toggleButton.textContent = 'Hide Controls';
+        } else {
+          controlsDiv.style.display = 'none';
+          toggleButton.textContent = 'Show Controls';
+        }
+      });
+
+      // Update selected values for multiple selections
+      function updateSelectedValues(selectElement, selectedArray) {
+        const options = Array.from(selectElement.selectedOptions);
+        selectedArray.length = 0; // Clear the array
+        options.forEach(option => selectedArray.push(option.value));
+        if (selectedArray.length === 0) selectedArray.push('all'); // Default to 'all' if nothing selected
+      }
+
+      // Event listeners for multiple selections
+      document.getElementById('color-filter').addEventListener('change', (e) => {
+        updateSelectedValues(e.target, selectedColor);
+        debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+      });
+
+      document.getElementById('hover-filter').addEventListener('change', (e) => {
+        updateSelectedValues(e.target, selectedHover);
+        debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+      });
+
+      document.getElementById('lat-min').addEventListener('input', (e) => {
+        latMin = parseFloat(e.target.value);
+        debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+      });
+
+      document.getElementById('lat-max').addEventListener('input', (e) => {
+        latMax = parseFloat(e.target.value);
+        debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+      });
+
+      document.getElementById('lon-min').addEventListener('input', (e) => {
+        lonMin = parseFloat(e.target.value);
+        debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+      });
+
+      document.getElementById('lon-max').addEventListener('input', (e) => {
+        lonMax = parseFloat(e.target.value);
+        debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+      });
+
+      document.getElementById('node-slider').addEventListener('input', (e) => {
+        debouncedUpdateNodes(parseInt(e.target.value));
+      });
+
+      map.on('click', (e) => {
+        if (!e.originalEvent.target.closest('.leaflet-marker-icon')) {
+          selectedNode = null;
+          debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+        }
+      });
+
+      map.on('moveend zoomend', () => {
+        debouncedUpdateNodes(parseInt(document.getElementById('node-slider').value));
+      });
+
+      // Initial update
+      debouncedUpdateNodes(64);
+    </script>
+    </body>
+    </html>
+    
