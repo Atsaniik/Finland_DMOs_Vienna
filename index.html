@@ -81,13 +81,33 @@
       .toggle-button:hover {
         background: rgba(255, 255, 255, 1);
       }
+
+      .map-link-overlay {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1001; /* Lifts it above the map layer */
+        background: rgba(255, 255, 255, 0.8);
+        padding: 8px 12px;
+        border-radius: 5px;
+        font-size: 14px;
+        font-family: sans-serif;
+        text-decoration: none;
+        color: #333;
+        font-weight: bold;
+        box-shadow: 0 0 8px rgba(0,0,0,0.3);
+      }
+      .map-link-overlay:hover {
+        background: rgba(255, 255, 255, 1);
+        color: #000;
+      }
     </style>
     </head>
     <body>
     <div id="map"></div>
     <div id="map-title" class="leaflet-control-title">Mapping Finnish DMOs' Hyperlink Networks</div>
     <button id="toggle-controls" class="toggle-button">Show Controls</button>
-    <a href="Finland_DMOs_Vienna.html">Go to Full Network</a>
+    <a href="Finland_DMOs_Vienna.html" class="map-link-overlay">Go to Full Network</a>
     <div id="controls" class="slider-container">
       <div class="slider-label">Max Nodes: <span id="node-count">64</span></div>
       <input type="range" id="node-slider" min="1" max="64" value="64" step="1">
