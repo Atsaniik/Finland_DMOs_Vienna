@@ -18,74 +18,68 @@
         .intro-hero {
           min-height: 100vh;
           width: 100%;
+
           display: flex;
+          flex-direction: column; /* Makes children vertical */
           align-items: center;
           justify-content: center;
+
           padding: 48px 24px;
           box-sizing: border-box;
           text-align: center;
           font-family: Arial, Helvetica, sans-serif;
+
           background:
             radial-gradient(circle at 15% 20%, rgba(0, 190, 255, 0.28), transparent 28%),
             radial-gradient(circle at 85% 25%, rgba(255, 89, 166, 0.25), transparent 30%),
             radial-gradient(circle at 50% 85%, rgba(130, 90, 255, 0.24), transparent 35%),
             linear-gradient(135deg, #f8fbff 0%, #eef6ff 45%, #fff7fb 100%);
+
           overflow: hidden;
         }
-        
-        .intro-card {
-          max-width: 1050px;
-          width: 100%;
-          padding: 64px 48px;
-          border-radius: 32px;
-          background: rgba(255, 255, 255, 0.78);
-          border: 1px solid rgba(255, 255, 255, 0.9);
-          box-shadow:
-            0 30px 80px rgba(23, 44, 82, 0.16),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(14px);
-        }
-        
-        .intro-badge {
-          display: inline-block;
-          margin-bottom: 28px;
-          padding: 10px 18px;
-          border-radius: 999px;
-          background: linear-gradient(90deg, #2563eb, #7c3aed, #ec4899);
-          color: #ffffff;
-          font-size: 15px;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-          box-shadow: 0 10px 24px rgba(124, 58, 237, 0.25);
-        }
-        
-        .intro-card h1 {
-          margin: 0;
-          font-size: clamp(44px, 7vw, 82px);
-          line-height: 1.08;
-          font-weight: 800;
-          letter-spacing: -0.04em;
-          color: #07111f;
-        }
-        
-        .intro-card h1::first-line {
-          background: linear-gradient(90deg, #0f766e, #2563eb, #7c3aed);
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-        }
-        
+    
         .intro-author {
           margin: 64px 0 0;
           font-size: clamp(22px, 2.6vw, 32px);
           line-height: 1.4;
-          color: #111827;
+          color: #072971;
           font-weight: 600;
         }
+
+        .intro-title {
+          max-width: 100%;
+          margin: 0 auto;
+          text-align: center;
+
+          font-size: clamp(26px, 4vw, 52px);
+          line-height: 1.12;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+
+          color: #102033;
+        }
+
+        .title-line {
+          display: block;
+        }
+
+        .title-main {
+          color: #102033;
+          white-space: normal;
+          font-size: 0.9em;
+          font-weight: 700;
+        }
+
+        .title-sub {
+          margin-top: 10px;
+          color: #010714;
+          font-size: 1.02em;
+          font-weight: 800;
+        }
+
         
         .intro-author span {
-          color: #2563eb;
+          color: #092869;
         }
         
         .intro-divider {
@@ -113,11 +107,7 @@
           font-weight: 700;
         }
         
-        @media (max-width: 700px) {
-          .intro-card {
-            padding: 44px 24px;
-            border-radius: 24px;
-          }
+   
         
           .intro-author {
             margin-top: 42px;
@@ -126,7 +116,7 @@
           .intro-divider {
             margin: 32px auto;
           }
-        }
+        
         
         #map {
           width: 100%;
@@ -209,29 +199,25 @@
     </style>
     </head>
     <body>
-      <section class="intro-hero" aria-labelledby="intro-title">
-      <div class="intro-card">
-        <div class="intro-badge">Interactive Network Map</div>
-    
-        <h1 id="intro-title">
-          Mapping Finnish DMOs’<br>
-          Hyperlink Networks
-        </h1>
-    
-        <p class="intro-author">
-          Peng Yang <span>@ University of Eastern Finland</span>
-        </p>
-    
-        <div class="intro-divider"></div>
-    
-        <p class="intro-event">
-          International Seminar: Adoption of impact models among NTOs and DMOs
-        </p>
-    
-        <p class="intro-date">
-          @ Vienna, 11 Sep 2026
-        </p>
-      </div>
+    <section class="intro-hero" aria-labelledby="intro-title">
+      <h1 id="intro-title" class="intro-title">
+        <span class="title-line title-main">Mapping the Hyperlink Networks</span>
+        <span class="title-line title-sub">of Finnish DMOs</span>
+      </h1>
+
+      <p class="intro-author">
+        Peng Yang <span>@ University of Eastern Finland</span>
+      </p>
+
+      <div class="intro-divider"></div>
+
+      <p class="intro-event">
+        Adoption of impact models among NTOs and DMOs
+      </p>
+
+      <p class="intro-date">
+        International Seminar @ Vienna, 11 Sep 2026
+      </p>
     </section>
         
     <div id="map"></div>
